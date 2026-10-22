@@ -17,6 +17,8 @@ for k = 1:numel(Rs)
     tt{end+1} = sprintf('R=%d, kept %.2f%%, PSNR %.1f', Rs(k), 100*frac_c(k), err_c(k));
 end
 show_grid(ims, tt, 2, 3, out, [t '_T2_compress_central']);
+fprintf('\nCompression  central disk R   kept %%   PSNR(dB)\n');
+fprintf('             %4d           %7.3f   %6.2f\n', [Rs; 100*frac_c; err_c]);
 
 % 2. Remove selected bands [r1 r2]
 bands = [0 0; 5 20; 20 60; 60 120; 120 400];
@@ -40,6 +42,8 @@ for k = 1:numel(fracs)
     thr = mag(max(1, round(fracs(k) * total)));
     err_t(k) = psnr_db(icfft(F .* (abs(F) >= thr)), I);
 end
+fprintf('\nCompression  largest coeffs   kept %%   PSNR(dB)\n');
+fprintf('                             %7.3f   %6.2f\n', [100*fracs; err_t]);
 
 f = figure('Position', [50 50 700 450]);
 semilogx(100*frac_c, err_c, 'o-', 'LineWidth', 1.5); hold on;

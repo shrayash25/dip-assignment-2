@@ -73,8 +73,8 @@ show_grid(ims, tt, 2, numel(angs), out, [t '_T1_5_rotation']);
 end
 
 function Y = fit_center(X, M, N)
-% Pad with zeros or crop so X sits centered in an M x N canvas.
-Y = zeros(M, N);
+% Pad with the mean (no artificial border edges) or crop so X sits centered in M x N.
+Y = mean(X(:)) * ones(M, N);
 [h, w] = size(X);
 r = min(h, M);  c = min(w, N);
 xr = floor((h - r)/2);  xc = floor((w - c)/2);

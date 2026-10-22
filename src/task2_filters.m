@@ -44,7 +44,7 @@ end
 % 3. Butterworth order: higher n = sharper cutoff = more ringing
 orders = [1 2 4 8 20];
 ims = {};  tt = {};
-fprintf('\nButterworth LPF D0=30  order  PSNR(dB)  edge ratio\n');
+fprintf('\nButterworth LPF D0=30  order  PSNR(dB)  edge ratio  ringing\n');
 for hp = 0:1
     for n = orders
         H = lowpass('butter', D, 30, n);
@@ -52,10 +52,14 @@ for hp = 0:1
         G = icfft(F .* H);
         ims{end+1} = G;  tt{end+1} = sprintf('Butterworth %s n=%d', kind{hp+1}, n);
         if ~hp
-            fprintf('                       %3d    %6.2f    %.3f\n', n, psnr_db(G, I), edge_ratio(G, I));
+            fprintf('                       %3d    %6.2f    %.3f     %.3f\n', n, ...
+                psnr_db(G, I), edge_ratio(G, I), ringing(H));
         end
     end
 end
+fprintf('Ringing = largest negative side lobe / main peak of the spatial kernel (0 = none)\n');
+fprintf('Ideal LPF D0=30 ringing %.3f, Gaussian LPF D0=30 ringing %.3f\n', ...
+    ringing(lowpass('ideal', D, 30)), ringing(lowpass('gauss', D, 30)));
 show_grid(ims, tt, 2, numel(orders), out, [t '_T2_filters_butter_orders']);
 
 % 4. Transition profile vs spatial kernel (explains ringing)
@@ -83,7 +87,7 @@ xlabel('x'); ylabel('h(x) normalized'); title('Spatial kernel (center row): side
 save_fig(f, out, [t '_T2_filters_profiles']);
 
 % 5. Noise: LPF smooths it, HPF amplifies it relative to the signal
-sigma = 0.05;
+sigma = 0.1;
 In = I + sigma * randn(M, N);
 Fn = cfft(In);
 ims = {In};  tt = {sprintf('Noisy (sigma=%.2f), PSNR %.1f', sigma, psnr_db(In, I))};
@@ -103,4 +107,10 @@ for a = 1:3
 end
 ims{end+1} = icfft(F .* (1 - lowpass('gauss', D, 30)));  tt{end+1} = 'Gaussian HPF clean';
 show_grid(ims, tt, 2, 4, out, [t '_T2_filters_noise']);
+end
+
+function r = ringing(H)
+% Size of the largest negative side lobe of the spatial kernel, relative to its peak.
+h = real(ifft2(ifftshift(H)));
+r = max(0, -min(h(:))) / max(h(:));
 end

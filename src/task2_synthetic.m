@@ -37,4 +37,6 @@ for k = 1:3
     tt{end+1} = sprintf('BPF mask f=%.0f', f(k));
 end
 show_grid(ims, tt, 3, 3, out, 'T2_synthetic_bpf_brf');
+show_spectra([{S}, ims(1:3)], [{'Synthetic image'}, tt(1:3)], out, 'T2_synthetic_bpf_spectra');
+show_spectra([{S}, ims(4:6)], [{'Synthetic image'}, tt(4:6)], out, 'T2_synthetic_brf_spectra');
 end

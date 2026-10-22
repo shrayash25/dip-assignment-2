@@ -17,17 +17,19 @@ for k = 1:numel(Rs)
     tt{end+1} = sprintf('R=%d, kept %.2f%%, PSNR %.1f', Rs(k), 100*frac_c(k), err_c(k));
 end
 show_grid(ims, tt, 2, 3, out, [t '_T2_compress_central']);
+show_spectra([{I}, ims([2 4 6])], [{'Original'}, tt([2 4 6])], out, [t '_T2_compress_spectra']);
 fprintf('\nCompression  central disk R   kept %%   PSNR(dB)\n');
 fprintf('             %4d           %7.3f   %6.2f\n', [Rs; 100*frac_c; err_c]);
 
 % 2. Remove selected bands [r1 r2]
 bands = [0 0; 5 20; 20 60; 60 120; 120 400];
-ims = {};  tt = {};
+ims = {};  tt = {};  frac_b = zeros(1, size(bands, 1));  err_b = frac_b;
 fprintf('\nCompression  removed band   kept %%   PSNR(dB)\n');
 for k = 1:size(bands, 1)
     K = ~(D > bands(k, 1) & D <= bands(k, 2));
     G = icfft(F .* K);
     fr = nnz(K) / total;
+    frac_b(k) = fr;  err_b(k) = psnr_db(G, I);
     fprintf('             (%3d,%3d]     %6.2f   %6.2f\n', bands(k, :), 100*fr, psnr_db(G, I));
     ims{end+1} = G;
     tt{end+1} = sprintf('Removed (%d,%d], kept %.1f%%, PSNR %.1f', bands(k, :), 100*fr, psnr_db(G, I));
@@ -48,8 +50,9 @@ fprintf('                             %7.3f   %6.2f\n', [100*fracs; err_t]);
 f = figure('Position', [50 50 700 450]);
 semilogx(100*frac_c, err_c, 'o-', 'LineWidth', 1.5); hold on;
 semilogx(100*fracs, err_t, 's-', 'LineWidth', 1.5);
+semilogx(100*frac_b(2:end), err_b(2:end), '^', 'MarkerSize', 8, 'LineWidth', 1.5);
 grid on; xlabel('Coefficients kept (%)'); ylabel('PSNR (dB)');
-legend('Central disk (low-pass)', 'Largest magnitudes', 'Location', 'southeast');
+legend('Central disk (low-pass)', 'Largest magnitudes', 'One band removed', 'Location', 'southeast');
 title('Reconstruction quality vs retained coefficients');
 save_fig(f, out, [t '_T2_compress_curve']);
 end

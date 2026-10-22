@@ -49,27 +49,38 @@ show_grid({I, Ic, Ie, logmag(F), logmag(Fc), logmag(Fe)}, ...
     2, 3, out, [t '_T1_4_scaling']);
 
 f = figure('Position', [50 50 800 400]);
-r = floor(M/2) + 1;
-plot(logmag(F(r, :)), 'k'); hold on;
-plot(logmag(Fc(r, :)), 'r'); plot(logmag(Fe(r, :)), 'b');
-legend('Original', 'Compressed', 'Expanded'); xlabel('v'); ylabel('log(1+|F|)');
-title('Center row of spectrum');
+[r0, e0] = energy_curve(F);  [rc, ec] = energy_curve(Fc);  [re, ee] = energy_curve(Fe);
+plot(r0, e0, 'k', rc, ec, 'r', re, ee, 'b', 'LineWidth', 1.5); hold on;
+plot([0 150], [0.9 0.9], 'k--');
+xlim([0 150]); grid on;
+legend('Original', sprintf('Compressed by %d', A), sprintf('Expanded by %d', B), '90%', ...
+    'Location', 'southeast');
+xlabel('Radius D(u,v)'); ylabel('Fraction of energy inside radius');
+title('Cumulative spectral energy (DC removed)');
 save_fig(f, out, [t '_T1_4_scaling_profile']);
 
-% 5. Rotation: smooth circular window removes border effects, so only content rotates
+% 5. Rotation: window is flat in the middle and tapers to zero at the circle edge,
+%    so the square image border does not add fixed lines to the spectrum
 D = dist_grid(M, N);  R = min(M, N) / 2;
-W = 0.5 * (1 + cos(pi * min(D / R, 1)));
-Iw = I .* W;
+taper = min(max((D - 0.7*R) / (0.3*R), 0), 1);
+Iw = I .* (0.5 * (1 + cos(pi * taper)));
+c = [floor(M/2) + 1, floor(N/2) + 1];  z = 64;
+center_crop = @(L) L(c(1)-z:c(1)+z, c(2)-z:c(2)+z);
+msk = dist_grid(2*z + 1, 2*z + 1) < z - 2;
+L0 = center_crop(logmag(cfft(Iw)));
 angs = [0 30 45 60 90];
-ims = {};  tt = {};
+imgs = {};  specs = {};  tt1 = {};  tt2 = {};
+fprintf('Rotation: corr(spectrum, original spectrum rotated) vs corr(spectrum, original spectrum)\n');
 for a = angs
     Ir = imrotate(Iw, a, 'bilinear', 'crop');
-    ims{end+1} = Ir;  tt{end+1} = sprintf('Rotated %d deg', a);
+    L = center_crop(logmag(cfft(Ir)));
+    Lref = imrotate(L0, a, 'bilinear', 'crop');
+    fprintf('  %2d deg: %.3f vs %.3f\n', a, corr2(L(msk), Lref(msk)), corr2(L(msk), L0(msk)));
+    imgs{end+1} = Ir;  specs{end+1} = L;
+    tt1{end+1} = sprintf('Rotated %d deg', a);
+    tt2{end+1} = sprintf('Spectrum %d deg (center zoom)', a);
 end
-for a = 1:numel(angs)
-    ims{end+1} = logmag(cfft(ims{a}));  tt{end+1} = sprintf('Spectrum %d deg', angs(a));
-end
-show_grid(ims, tt, 2, numel(angs), out, [t '_T1_5_rotation']);
+show_grid([imgs specs], [tt1 tt2], 2, numel(angs), out, [t '_T1_5_rotation']);
 end
 
 function Y = fit_center(X, M, N)
@@ -82,12 +93,17 @@ yr = floor((M - r)/2);  yc = floor((N - c)/2);
 Y(yr+1:yr+r, yc+1:yc+c) = X(xr+1:xr+r, xc+1:xc+c);
 end
 
-function r = energy_radius(F)
-% Radius that holds 90% of the non-DC spectral energy.
+function [d, e] = energy_curve(F)
+% Fraction of non-DC spectral energy inside each radius.
 P = abs(F).^2;
 D = dist_grid(size(F, 1), size(F, 2));
 P(D == 0) = 0;
 [d, idx] = sort(D(:));
 e = cumsum(P(idx)) / sum(P(:));
+end
+
+function r = energy_radius(F)
+% Radius that holds 90% of the non-DC spectral energy.
+[d, e] = energy_curve(F);
 r = d(find(e >= 0.9, 1));
 end

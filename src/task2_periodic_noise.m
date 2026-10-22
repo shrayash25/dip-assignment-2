@@ -15,6 +15,11 @@ for k = 1:size(freqs, 1)
     [Gn, Gb, pk] = denoise(In, D, 5, 8);
     fprintf('                (%d,%d)  %.2f   %6.2f   %6.2f   %6.2f\n', freqs(k, :), amp, ...
         psnr_db(In, I), psnr_db(Gn, I), psnr_db(Gb, I));
+    fprintf('                  peaks found at (row,col) offsets (%d,%d) and (%d,%d)\n', pk(1, :), pk(2, :));
+    if k == 1
+        show_spectra({I, In, Gn, Gb}, {'Original', 'Noisy', 'Notch reject', 'Band reject'}, ...
+            out, [t '_T2_noise_spectra']);
+    end
     Fn = logmag(cfft(In));
     ims = [ims, {In, mark_peaks(Fn, pk), Gn, Gb}];
     tt = [tt, {sprintf('Noise (%d,%d) amp %.2f', freqs(k, :), amp), 'Spectrum, detected peaks', ...
